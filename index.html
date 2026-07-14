@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>FullGold · Finanzas Personales</title>
+<meta name="description" content="Tu dinero, bajo control. Ingresos, gastos, deudas, cuotas y simulaciones — 100% en tu dispositivo.">
+<!-- Comportamiento de app instalada -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FullGold">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#c99700">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%23111'/%3E%3Ctext x='90' y='128' font-size='104' font-family='Georgia,serif' font-weight='bold' fill='%23e8b923' text-anchor='middle'%3EFG%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#f6f5f0;
+    --surface:#ffffff;
+    --surface-2:#f3f1e9;
+    --border:#e7e3d5;
+    --text:#1c1a12;
+    --muted:#8c8672;
+    --gold:#c99700;
+    --gold-2:#e8b923;
+    --gold-soft:#fbf3d8;
+    --green:#12945f;
+    --green-soft:#e4f6ee;
+    --red:#d64550;
+    --red-soft:#fbe9ea;
+    --amber:#e08a00;
+    --amber-soft:#fdf1dc;
+    --blue:#2f7fd6;
+    --blue-soft:#e6f0fb;
+    --shadow:0 1px 3px rgba(30,25,5,.06),0 10px 30px rgba(30,25,5,.06);
+    --radius:18px;
+    --radius-sm:12px;
+    --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e0d0a;
+    --surface:#1a1813;
+    --surface-2:#232016;
+    --border:#332f22;
+    --text:#f4f1e6;
+    --muted:#9b957f;
+    --gold:#e8b923;
+    --gold-2:#f4cf3f;
+    --gold-soft:#2a2410;
+    --green:#2fce8f;
+    --green-soft:#12291f;
+    --red:#f0707a;
+    --red-soft:#2c1618;
+    --amber:#f4b74a;
+    --amber-soft:#2c2310;
+    --blue:#6cb0f5;
+    --blue-soft:#131f2c;
+    --shadow:0 1px 3px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:var(--font);
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+    padding-bottom:calc(78px + env(safe-area-inset-bottom));
+    overscroll-behavior-y:none;
+  }
+  .hidden{display:none!important}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  input,select,textarea{font-family:inherit;font-size:16px}
+
+  /* ---------- Header ---------- */
+  header{
+    position:sticky;top:0;z-index:40;
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    padding:calc(12px + env(safe-area-inset-top)) 16px 12px;
+    display:flex;align-items:center;gap:12px;
+  }
+  .logo{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:-.3px}
+  .logo .mark{
+    width:34px;height:34px;border-radius:10px;
+    background:#141310;color:var(--gold-2);
+    display:grid;place-items:center;font-family:Georgia,serif;font-weight:700;font-size:15px;
+    box-shadow:inset 0 0 0 1px rgba(232,185,35,.35);
+  }
+  .logo b{font-size:19px}
+  .logo b span{color:var(--gold)}
+  .head-sp{flex:1}
+  .icon-btn{
+    width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
+    background:var(--surface-2);color:var(--text);font-size:17px;
+  }
+  .icon-btn:active{transform:scale(.94)}
+
+  main{max-width:720px;margin:0 auto;padding:16px 16px 24px}
+  .view{animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  h2.title{font-size:22px;font-weight:800;letter-spacing:-.4px;margin-bottom:2px}
+  .sub{color:var(--muted);font-size:13.5px;margin-bottom:16px}
+
+  /* ---------- Cards ---------- */
+  .card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;
+  }
+  .card+.card{margin-top:12px}
+
+  .hero{
+    background:linear-gradient(135deg,#141310 0%,#2a2413 55%,#3d3312 100%);
+    color:#fff;border:none;position:relative;overflow:hidden;
+  }
+  .hero::after{content:"";position:absolute;right:-40px;top:-40px;width:170px;height:170px;
+    background:radial-gradient(circle,rgba(232,185,35,.35),transparent 70%);}
+  .hero .lbl{color:#d9d2b6;font-size:13px;font-weight:600;letter-spacing:.2px}
+  .hero .big{font-size:34px;font-weight:800;letter-spacing:-1px;margin:2px 0 4px}
+  .hero .big.neg{color:#ff9ea6}
+  .hero .row{display:flex;gap:8px;margin-top:14px}
+  .hero .pill{background:rgba(255,255,255,.1);border-radius:12px;padding:9px 11px;flex:1}
+  .hero .pill .k{font-size:11px;color:#cfc8ac;font-weight:600}
+  .hero .pill .v{font-size:15px;font-weight:700;margin-top:1px}
+  .hero .pill .v.up{color:#7ff0bf}
+  .hero .pill .v.down{color:#ff9ea6}
+
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px 14px;box-shadow:var(--shadow)}
+  .stat .k{font-size:12px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
+  .stat .v{font-size:19px;font-weight:800;letter-spacing:-.4px;margin-top:4px}
+  .stat .v.green{color:var(--green)} .stat .v.red{color:var(--red)} .stat .v.gold{color:var(--gold)} .stat .v.blue{color:var(--blue)}
+
+  .section-h{display:flex;align-items:center;justify-content:space-between;margin:22px 2px 10px}
+  .section-h h3{font-size:16px;font-weight:800;letter-spacing:-.2px}
+  .section-h .link{color:var(--gold);font-size:13px;font-weight:700}
+
+  /* ---------- List items ---------- */
+  .item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+  .item:last-child{border-bottom:none}
+  .ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:19px;flex:none;background:var(--surface-2)}
+  .item .m{flex:1;min-width:0}
+  .item .m .t{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .m .s{font-size:12.5px;color:var(--muted);margin-top:1px}
+  .item .amt{font-weight:800;font-size:15px;white-space:nowrap}
+  .amt.green{color:var(--green)} .amt.red{color:var(--red)}
+  .item .del{color:var(--muted);font-size:15px;padding:6px;opacity:.6}
+  .empty{text-align:center;color:var(--muted);padding:26px 10px;font-size:14px}
+  .empty .e{font-size:34px;display:block;margin-bottom:8px;opacity:.7}
+
+  .progress{height:7px;background:var(--surface-2);border-radius:99px;overflow:hidden;margin-top:8px}
+  .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-2));border-radius:99px}
+  .progress.red > i{background:linear-gradient(90deg,#d64550,#f0707a)}
+
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;background:var(--surface-2);color:var(--muted)}
+  .tag.soon{background:var(--amber-soft);color:var(--amber)}
+  .tag.ok{background:var(--green-soft);color:var(--green)}
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--gold);color:#1c1400;font-weight:800;font-size:15px;
+    padding:13px 16px;border-radius:14px;width:100%;transition:transform .06s;
+  }
+  .btn:active{transform:scale(.98)}
+  .btn.ghost{background:var(--surface-2);color:var(--text)}
+  .btn.danger{background:var(--red-soft);color:var(--red)}
+  .btn.dark{background:#141310;color:var(--gold-2)}
+  .btn-row{display:flex;gap:10px;margin-top:14px}
+
+  /* ---------- Forms ---------- */
+  label.f{display:block;font-size:13px;font-weight:700;margin:14px 0 6px;color:var(--text)}
+  .field, input.field, select.field, textarea.field{
+    width:100%;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:12px;padding:12px 13px;color:var(--text);font-size:16px;outline:none;
+  }
+  .field:focus{border-color:var(--gold)}
+  textarea.field{resize:vertical;min-height:70px}
+  .seg{display:flex;gap:8px;background:var(--surface-2);padding:5px;border-radius:14px}
+  .seg button{flex:1;padding:10px;border-radius:10px;font-weight:700;font-size:14px;color:var(--muted)}
+  .seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+  .seg.type button.on.inc{color:var(--green)} .seg.type button.on.exp{color:var(--red)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .chip{padding:8px 12px;border-radius:11px;background:var(--surface-2);font-size:13.5px;font-weight:600;border:1px solid transparent}
+  .chip.on{background:var(--gold-soft);border-color:var(--gold);color:var(--gold)}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:6px}
+
+  /* ---------- Bottom nav ---------- */
+  nav.tabs{
+    position:fixed;left:0;right:0;bottom:0;z-index:50;
+    background:var(--surface);border-top:1px solid var(--border);
+    display:flex;padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+  }
+  nav.tabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 2px;color:var(--muted);font-size:10.5px;font-weight:700}
+  nav.tabs button .ti{font-size:20px;line-height:1}
+  nav.tabs button.on{color:var(--gold)}
+
+  .fab{
+    position:fixed;right:18px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:45;
+    width:56px;height:56px;border-radius:18px;background:var(--gold);color:#1c1400;
+    font-size:28px;display:grid;place-items:center;box-shadow:0 8px 24px rgba(201,151,0,.5);
+  }
+  .fab:active{transform:scale(.94)}
+
+  /* ---------- Modal / Sheet ---------- */
+  .backdrop{position:fixed;inset:0;background:rgba(10,8,3,.5);z-index:60;display:flex;align-items:flex-end;justify-content:center;animation:fade .2s}
+  .sheet{
+    background:var(--surface);width:100%;max-width:720px;
+    border-radius:22px 22px 0 0;padding:8px 18px calc(20px + env(safe-area-inset-bottom));
+    max-height:92vh;overflow-y:auto;animation:up .28s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes up{from{transform:translateY(100%)}to{transform:none}}
+  .grip{width:40px;height:4px;background:var(--border);border-radius:99px;margin:8px auto 6px}
+  .sheet h3{font-size:19px;font-weight:800;margin:6px 2px 2px}
+
+  /* ---------- Learn ---------- */
+  .lesson{border-left:3px solid var(--gold);padding:2px 0 2px 13px;margin:14px 0}
+  .lesson h4{font-size:15px;font-weight:800;margin-bottom:3px}
+  .lesson p{font-size:14px;color:var(--text)}
+  .advice{display:flex;gap:11px;align-items:flex-start;padding:12px;background:var(--gold-soft);border-radius:14px;margin-bottom:10px}
+  .advice .em{font-size:22px;flex:none}
+  .advice .tx{font-size:13.5px}
+  .advice .tx b{display:block;margin-bottom:2px}
+  .accordion{border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px}
+  .accordion > summary{padding:14px;font-weight:700;font-size:14.5px;list-style:none;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+  .accordion > summary::-webkit-details-marker{display:none}
+  .accordion > summary::after{content:"+";color:var(--gold);font-size:20px;font-weight:400}
+  .accordion[open] > summary::after{content:"–"}
+  .accordion .body{padding:0 14px 14px;font-size:13.5px;color:var(--text)}
+  .accordion .body p{margin-bottom:8px}
+  .accordion .body ul{margin:0 0 8px 18px} .accordion .body li{margin-bottom:4px}
+
+  /* ---------- Simulator ---------- */
+  .simres{background:var(--surface-2);border-radius:16px;padding:16px;margin-top:16px}
+  .simres .verdict{font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .simres .verdict.good{color:var(--green)} .simres .verdict.warn{color:var(--amber)} .simres .verdict.bad{color:var(--red)}
+  .simrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--border);font-size:14px}
+  .simrow:last-child{border-bottom:none}
+  .simrow .v{font-weight:800}
+  .note{font-size:12.5px;color:var(--muted);text-align:center;margin-top:14px;line-height:1.5}
+
+  .toast{position:fixed;bottom:calc(150px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
+    background:#141310;color:#fff;padding:11px 18px;border-radius:12px;font-size:14px;font-weight:600;z-index:80;box-shadow:var(--shadow);animation:fade .2s}
+
+  /* ---------- Lock screen ---------- */
+  #lock{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px}
+  #lock .mark{width:72px;height:72px;border-radius:22px;background:#141310;color:var(--gold-2);display:grid;place-items:center;font-family:Georgia,serif;font-weight:700;font-size:30px}
+  #lock h1{font-size:22px;font-weight:800}
+  #lock .dots{display:flex;gap:14px;margin:4px 0}
+  #lock .dots i{width:14px;height:14px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border)}
+  #lock .dots i.on{background:var(--gold);border-color:var(--gold)}
+  #lock .pad{display:grid;grid-template-columns:repeat(3,72px);gap:16px}
+  #lock .pad button{height:72px;border-radius:50%;background:var(--surface);border:1px solid var(--border);font-size:26px;font-weight:600;box-shadow:var(--shadow)}
+  #lock .pad button:active{background:var(--surface-2)}
+  #lock .err{color:var(--red);font-size:13px;font-weight:600;height:16px}
+</style>
+</head>
+<body>
+
+<!-- ============ LOCK SCREEN ============ -->
+<div id="lock" class="hidden">
+  <div class="mark">FG</div>
+  <h1>FullGold</h1>
+  <div class="err" id="lockErr"></div>
+  <div class="dots" id="lockDots"><i></i><i></i><i></i><i></i></div>
+  <div class="pad" id="lockPad"></div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app">
+  <header>
+    <div class="logo"><div class="mark">FG</div><b>Full<span>Gold</span></b></div>
+    <div class="head-sp"></div>
+    <button class="icon-btn" id="btnTheme" title="Tema">🌙</button>
+    <button class="icon-btn" id="btnSettings" title="Ajustes">⚙️</button>
+  </header>
+
+  <main>
+    <div id="view-home" class="view"></div>
+    <div id="view-money" class="view hidden"></div>
+    <div id="view-debt" class="view hidden"></div>
+    <div id="view-sim" class="view hidden"></div>
+    <div id="view-learn" class="view hidden"></div>
+  </main>
+
+  <button class="fab" id="fab" title="Agregar">＋</button>
+
+  <nav class="tabs">
+    <button data-tab="home" class="on"><span class="ti">🏠</span>Resumen</button>
+    <button data-tab="money"><span class="ti">💸</span>Movimientos</button>
+    <button data-tab="debt"><span class="ti">📋</span>Deudas</button>
+    <button data-tab="sim"><span class="ti">🎯</span>Simular</button>
+    <button data-tab="learn"><span class="ti">🎓</span>Aprende</button>
+  </nav>
+</div>
+
+<div id="modalRoot"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   FullGold — App de finanzas personales 100% local.
+   Los datos se guardan sólo en localStorage de este dispositivo.
+   No hay peticiones de red, ni analítica, ni terceros.
+   ===================================================================== */
+
+const LS_KEY = 'fullgold.v1';
+const $ = (s,el=document)=>el.querySelector(s);
+const $$ = (s,el=document)=>[...el.querySelectorAll(s)];
+
+/* ---------- Estado ---------- */
+const DEFAULTS = () => ({
+  settings:{ currency:'CLP', theme:'light', pin:null, locale:'es-CL' },
+  tx:[],       // {id,type:'income'|'expense',amount,cat,note,date}
+  debts:[],    // {id,name,total,paid,rate,dueDay,note}
+  plans:[],    // cuotas: {id,name,total,installments,paid,start,note}
+  goals:[]     // {id,name,target,saved}
+});
+let S = load();
+
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return DEFAULTS();
+    return Object.assign(DEFAULTS(), JSON.parse(raw));
+  }catch(e){ return DEFAULTS(); }
+}
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(S)); }
+const uid = ()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+
+/* ---------- Formato ---------- */
+const CUR = {
+  CLP:{sym:'$',dec:0}, USD:{sym:'US$',dec:2}, EUR:{sym:'€',dec:2},
+  MXN:{sym:'$',dec:2}, ARS:{sym:'$',dec:2}, COP:{sym:'$',dec:0}, PEN:{sym:'S/',dec:2}
+};
+function fmt(n){
+  const c = CUR[S.settings.currency]||CUR.CLP;
+  const v = Math.round((n||0)*100)/100;
+  const s = Math.abs(v).toLocaleString(S.settings.locale||'es-CL',{minimumFractionDigits:c.dec,maximumFractionDigits:c.dec});
+  return (v<0?'-':'')+c.sym+s;
+}
+function monthKey(d){ const x=new Date(d); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'); }
+const NOW = ()=>new Date();
+function thisMonth(){ return monthKey(NOW()); }
+function fdate(d){ return new Date(d).toLocaleDateString(S.settings.locale||'es-CL',{day:'2-digit',month:'short'}); }
+
+/* ---------- Categorías ---------- */
+const CATS = {
+  income:[['💼','Sueldo'],['💰','Extra'],['🎁','Regalo'],['📈','Inversión'],['🔁','Reembolso'],['🧾','Venta']],
+  expense:[['🍽️','Comida'],['🏠','Arriendo'],['⚡','Servicios'],['🚌','Transporte'],['🛒','Súper'],
+           ['💊','Salud'],['🎮','Ocio'],['👕','Ropa'],['📚','Educación'],['💳','Cuotas'],['📱','Suscripciones'],['🔧','Otros']]
+};
+function catIcon(type,name){ const l=(CATS[type]||[]).find(c=>c[1]===name); return l?l[0]:(type==='income'?'💰':'💸'); }
+
+/* =====================================================================
+   CÁLCULOS
+   ===================================================================== */
+function sumTx(type,mk){
+  return S.tx.filter(t=>t.type===type && (!mk||monthKey(t.date)===mk)).reduce((a,t)=>a+ +t.amount,0);
+}
+function balanceTotal(){ return sumTx('income')-sumTx('expense'); }
+function debtRemaining(){ return S.debts.reduce((a,d)=>a+Math.max(0,(+d.total)-(+d.paid||0)),0); }
+function plansRemaining(){
+  return S.plans.reduce((a,p)=>{
+    const per = (+p.total)/(+p.installments);
+    return a + per*Math.max(0,(+p.installments)-(+p.paid||0));
+  },0);
+}
+function monthlyInstallmentLoad(){
+  // suma de cuotas mensuales de planes activos
+  return S.plans.reduce((a,p)=> (+p.paid<+p.installments? a+(+p.total)/(+p.installments):a),0);
+}
+
+/* =====================================================================
+   RENDER: HOME
+   ===================================================================== */
+function renderHome(){
+  const mk = thisMonth();
+  const inc = sumTx('income',mk), exp = sumTx('expense',mk);
+  const bal = balanceTotal();
+  const savRate = inc>0 ? Math.round((inc-exp)/inc*100) : 0;
+  const recent = [...S.tx].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,6);
+  const upcoming = upcomingPayments();
+
+  $('#view-home').innerHTML = `
+    <div class="card hero">
+      <div class="lbl">Balance total</div>
+      <div class="big ${bal<0?'neg':''}">${fmt(bal)}</div>
+      <div class="row">
+        <div class="pill"><div class="k">Ingresos del mes</div><div class="v up">${fmt(inc)}</div></div>
+        <div class="pill"><div class="k">Gastos del mes</div><div class="v down">${fmt(exp)}</div></div>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat"><div class="k">💵 Disponible del mes</div><div class="v ${inc-exp<0?'red':'green'}">${fmt(inc-exp)}</div></div>
+      <div class="stat"><div class="k">🐷 Tasa de ahorro</div><div class="v ${savRate<0?'red':savRate<10?'gold':'green'}">${savRate}%</div></div>
+      <div class="stat"><div class="k">📋 Deuda pendiente</div><div class="v ${debtRemaining()>0?'red':'green'}">${fmt(debtRemaining())}</div></div>
+      <div class="stat"><div class="k">💳 Cuotas por pagar</div><div class="v gold">${fmt(plansRemaining())}</div></div>
+    </div>
+
+    <div class="card" style="margin-top:12px;background:var(--gold-soft);border-color:transparent">
+      <div class="advice" style="background:transparent;padding:0">
+        <div class="em">${topAdvice().em}</div>
+        <div class="tx"><b>${topAdvice().t}</b>${topAdvice().d}</div>
+      </div>
+    </div>
+
+    ${upcoming.length?`
+    <div class="section-h"><h3>Próximos pagos</h3></div>
+    <div class="card">
+      ${upcoming.map(u=>`
+        <div class="item">
+          <div class="ico">${u.em}</div>
+          <div class="m"><div class="t">${esc(u.name)}</div><div class="s">${u.when}</div></div>
+          <div class="amt red">${fmt(u.amount)}</div>
+        </div>`).join('')}
+    </div>`:''}
+
+    <div class="section-h"><h3>Movimientos recientes</h3>
+      <span class="link" onclick="go('money')">Ver todo</span></div>
+    <div class="card">
+      ${recent.length? recent.map(txRow).join('') : emptyBox('🪙','Aún no registras movimientos','Toca ＋ para empezar')}
+    </div>
+  `;
+}
+
+function txRow(t){
+  return `<div class="item">
+    <div class="ico">${catIcon(t.type,t.cat)}</div>
+    <div class="m"><div class="t">${esc(t.cat)}${t.note?' · '+esc(t.note):''}</div>
+      <div class="s">${fdate(t.date)}</div></div>
+    <div class="amt ${t.type==='income'?'green':'red'}">${t.type==='income'?'+':'−'}${fmt(t.amount)}</div>
+    <button class="del" onclick="delTx('${t.id}')">✕</button>
+  </div>`;
+}
+
+function upcomingPayments(){
+  const list=[];
+  const today = NOW().getDate();
+  S.debts.forEach(d=>{
+    if((+d.paid||0)>=+d.total) return;
+    if(d.dueDay){
+      const day=+d.dueDay;
+      const diff = day>=today ? day-today : day-today+30;
+      list.push({name:d.name,em:'📋',amount:Math.min(monthlyDebt(d),(+d.total)-(+d.paid||0)),
+        when: diff===0?'Vence hoy':diff===1?'Vence mañana':'En '+diff+' días', sort:diff});
+    }
+  });
+  S.plans.forEach(p=>{
+    if((+p.paid||0)>=+p.installments) return;
+    const per=(+p.total)/(+p.installments);
+    list.push({name:p.name+' ('+((+p.paid||0)+1)+'/'+p.installments+')',em:'💳',amount:per,when:'Cuota mensual',sort:15});
+  });
+  return list.sort((a,b)=>a.sort-b.sort).slice(0,4);
+}
+function monthlyDebt(d){ return d.rate?( +d.total*0.1 ):(+d.total*0.1); } // estimación simple 10%
+
+/* =====================================================================
+   RENDER: MOVIMIENTOS
+   ===================================================================== */
+let moneyFilter='all';
+function renderMoney(){
+  const mk=thisMonth();
+  const list=[...S.tx].sort((a,b)=>new Date(b.date)-new Date(a.date))
+    .filter(t=>moneyFilter==='all'||t.type===moneyFilter);
+  const byCat={};
+  S.tx.filter(t=>t.type==='expense'&&monthKey(t.date)===mk).forEach(t=>{byCat[t.cat]=(byCat[t.cat]||0)+ +t.amount;});
+  const cats=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxCat=cats.length?cats[0][1]:1;
+
+  $('#view-money').innerHTML=`
+    <h2 class="title">Movimientos</h2>
+    <div class="sub">Ingresos y gastos de ${monthName()}</div>
+
+    ${cats.length?`
+    <div class="card">
+      <div class="section-h" style="margin:0 0 10px"><h3>Gastos por categoría</h3></div>
+      ${cats.map(([c,v])=>`
+        <div style="margin-bottom:11px">
+          <div style="display:flex;justify-content:space-between;font-size:13.5px;font-weight:600">
+            <span>${catIcon('expense',c)} ${esc(c)}</span><span>${fmt(v)}</span></div>
+          <div class="progress"><i style="width:${Math.round(v/maxCat*100)}%"></i></div>
+        </div>`).join('')}
+    </div>`:''}
+
+    <div class="seg" style="margin:14px 0">
+      <button class="${moneyFilter==='all'?'on':''}" onclick="setMF('all')">Todo</button>
+      <button class="${moneyFilter==='income'?'on':''}" onclick="setMF('income')">Ingresos</button>
+      <button class="${moneyFilter==='expense'?'on':''}" onclick="setMF('expense')">Gastos</button>
+    </div>
+
+    <div class="card">
+      ${list.length? list.map(txRow).join('') : emptyBox('🧾','Sin movimientos','Toca ＋ para agregar')}
+    </div>
+  `;
+}
+function setMF(f){ moneyFilter=f; renderMoney(); }
+function monthName(){ return NOW().toLocaleDateString(S.settings.locale||'es-CL',{month:'long',year:'numeric'}); }
+
+/* =====================================================================
+   RENDER: DEUDAS + CUOTAS
+   ===================================================================== */
+function renderDebt(){
+  $('#view-debt').innerHTML=`
+    <h2 class="title">Deudas y cuotas</h2>
+    <div class="sub">Todo lo que debes, en un solo lugar</div>
+
+    <div class="stat-grid" style="margin-top:0">
+      <div class="stat"><div class="k">📋 Deuda total</div><div class="v red">${fmt(debtRemaining())}</div></div>
+      <div class="stat"><div class="k">💳 Pago mensual cuotas</div><div class="v gold">${fmt(monthlyInstallmentLoad())}</div></div>
+    </div>
+
+    <div class="section-h"><h3>Compras en cuotas</h3><span class="link" onclick="openPlan()">+ Agregar</span></div>
+    <div class="card">
+      ${S.plans.length? S.plans.map(planRow).join('') : emptyBox('💳','Sin compras en cuotas','Registra tus pagos en 3, 6, 12 cuotas…')}
+    </div>
+
+    <div class="section-h"><h3>Otras deudas</h3><span class="link" onclick="openDebt()">+ Agregar</span></div>
+    <div class="card">
+      ${S.debts.length? S.debts.map(debtRow).join('') : emptyBox('📋','Sin deudas registradas','Créditos, préstamos, tarjetas…')}
+    </div>
+  `;
+}
+function planRow(p){
+  const per=(+p.total)/(+p.installments);
+  const paid=+p.paid||0, pct=Math.round(paid/(+p.installments)*100);
+  const done=paid>=+p.installments;
+  return `<div class="item" style="flex-wrap:wrap">
+    <div class="ico">💳</div>
+    <div class="m"><div class="t">${esc(p.name)}</div>
+      <div class="s">${fmt(per)}/mes · ${paid}/${p.installments} pagadas ${done?'<span class="tag ok">Pagado</span>':''}</div></div>
+    <div class="amt">${fmt(per*Math.max(0,(+p.installments)-paid))}</div>
+    <div style="flex-basis:100%"><div class="progress ${done?'':''}"><i style="width:${pct}%"></i></div></div>
+    <div style="flex-basis:100%;display:flex;gap:8px;margin-top:9px">
+      ${done?'':`<button class="btn ghost" style="padding:8px" onclick="payPlan('${p.id}')">✓ Pagar cuota</button>`}
+      <button class="btn ghost" style="padding:8px;max-width:44px" onclick="delPlan('${p.id}')">🗑️</button>
+    </div>
+  </div>`;
+}
+function debtRow(d){
+  const rem=Math.max(0,(+d.total)-(+d.paid||0)), pct=Math.round((+d.paid||0)/(+d.total)*100);
+  return `<div class="item" style="flex-wrap:wrap">
+    <div class="ico">📋</div>
+    <div class="m"><div class="t">${esc(d.name)}</div>
+      <div class="s">${fmt(rem)} restante${d.rate?' · '+d.rate+'% interés':''}${d.dueDay?' · vence día '+d.dueDay:''}</div></div>
+    <div class="amt red">${fmt(rem)}</div>
+    <div style="flex-basis:100%"><div class="progress red"><i style="width:${pct}%"></i></div></div>
+    <div style="flex-basis:100%;display:flex;gap:8px;margin-top:9px">
+      <button class="btn ghost" style="padding:8px" onclick="abonar('${d.id}')">＋ Abonar</button>
+      <button class="btn ghost" style="padding:8px;max-width:44px" onclick="delDebt('${d.id}')">🗑️</button>
+    </div>
+  </div>`;
+}
+
+/* =====================================================================
+   RENDER: SIMULADOR
+   ===================================================================== */
+function renderSim(){
+  $('#view-sim').innerHTML=`
+    <h2 class="title">Simulador de compra</h2>
+    <div class="sub">¿Me conviene comprar esto? Descúbrelo antes de gastar.</div>
+    <div class="card">
+      <label class="f">¿Qué quieres comprar?</label>
+      <input class="field" id="simName" placeholder="Ej: Notebook, celular, viaje…">
+      <label class="f">Precio total</label>
+      <input class="field" id="simPrice" type="number" inputmode="numeric" placeholder="0" oninput="runSim()">
+      <label class="f">Forma de pago</label>
+      <div class="seg" style="margin-top:4px">
+        <button id="simCash" class="on" onclick="simMode('cash')">Contado</button>
+        <button id="simInst" onclick="simMode('inst')">En cuotas</button>
+      </div>
+      <div id="simInstBox" class="hidden">
+        <label class="f">Número de cuotas</label>
+        <input class="field" id="simN" type="number" inputmode="numeric" placeholder="12" value="12" oninput="runSim()">
+        <label class="f">Interés mensual % <span style="font-weight:400;color:var(--muted)">(0 si es sin interés)</span></label>
+        <input class="field" id="simRate" type="number" inputmode="decimal" placeholder="0" value="0" oninput="runSim()">
+      </div>
+      <div id="simOut"></div>
+    </div>
+    <p class="note">💡 La simulación usa tus ingresos y gastos reales del mes para estimar si el pago cabe en tu presupuesto. Es orientativa, no es asesoría financiera profesional.</p>
+  `;
+  runSim();
+}
+let simPay='cash';
+function simMode(m){ simPay=m; $('#simCash').classList.toggle('on',m==='cash'); $('#simInst').classList.toggle('on',m==='inst');
+  $('#simInstBox').classList.toggle('hidden',m!=='cash'?false:true); $('#simInstBox').classList.toggle('hidden',m==='cash'); runSim(); }
+function runSim(){
+  const price=+($('#simPrice')?.value||0);
+  const out=$('#simOut'); if(!out) return;
+  if(price<=0){ out.innerHTML=''; return; }
+  const mk=thisMonth();
+  const disponible = sumTx('income',mk)-sumTx('expense',mk); // flujo libre del mes
+  const balance = balanceTotal();
+  let rows='', monthly=price, total=price, verdict, vclass, vem, extra='';
+
+  if(simPay==='inst'){
+    const n=Math.max(1,+($('#simN').value||1));
+    const r=Math.max(0,+($('#simRate').value||0))/100;
+    // cuota con interés (sistema francés)
+    if(r>0){ monthly = price*r/(1-Math.pow(1+r,-n)); total=monthly*n; }
+    else { monthly=price/n; total=price; }
+    rows+=simLine('Cuota mensual',fmt(monthly),true);
+    rows+=simLine('N° de cuotas',n+' meses');
+    rows+=simLine('Total a pagar',fmt(total));
+    if(total>price) rows+=simLine('Costo del crédito','+'+fmt(total-price),false,'var(--red)');
+  } else {
+    rows+=simLine('Pago único',fmt(price),true);
+    rows+=simLine('Te quedaría (balance)',fmt(balance-price),false,balance-price<0?'var(--red)':'');
+  }
+
+  // Veredicto según flujo libre mensual
+  const load = simPay==='inst'? monthly : price;
+  const ratio = disponible>0 ? load/disponible : 99;
+  const extraLoad = monthlyInstallmentLoad(); // cuotas ya existentes
+  if(simPay==='cash'){
+    if(price<=balance*0.5){ verdict='Te conviene ✅'; vclass='good'; vem='😎'; extra='Puedes pagarlo al contado sin comprometer tu colchón.'; }
+    else if(price<=balance){ verdict='Con cuidado ⚠️'; vclass='warn'; vem='🤔'; extra='Puedes pagarlo, pero usarías gran parte de tus ahorros. ¿Tienes fondo de emergencia?'; }
+    else { verdict='No te conviene ahora ❌'; vclass='bad'; vem='🛑'; extra='El precio supera tu balance disponible. Considera ahorrar primero o comparar opciones.'; }
+  } else {
+    if(ratio<=0.15){ verdict='Te conviene ✅'; vclass='good'; vem='😎'; extra=`La cuota es solo el ${Math.round(ratio*100)}% de lo que te sobra cada mes.`; }
+    else if(ratio<=0.35){ verdict='Manejable ⚠️'; vclass='warn'; vem='🤔'; extra=`La cuota toma ${Math.round(ratio*100)}% de tu excedente mensual. Ajustado pero posible.`; }
+    else { verdict='Riesgoso ❌'; vclass='bad'; vem='🛑'; extra= disponible<=0? 'Este mes gastas todo lo que ganas: sumar una cuota te endeudaría más.' : `La cuota se lleva ${Math.round(ratio*100)}% de tu excedente. Demasiado apretado.`; }
+    if(total>price*1.15) extra+=` Además, pagarías ${fmt(total-price)} extra en intereses.`;
+  }
+
+  out.innerHTML=`<div class="simres">
+    <div class="verdict ${vclass}">${vem} ${verdict}</div>
+    ${rows}
+    <div class="simrow"><span>Tu excedente mensual actual</span><span class="v" style="color:${disponible<0?'var(--red)':'var(--green)'}">${fmt(disponible)}</span></div>
+    <p class="hint" style="margin-top:12px">${extra}</p>
+  </div>`;
+}
+function simLine(k,v,strong,color){ return `<div class="simrow"><span>${k}</span><span class="v" style="${strong?'font-size:16px;':''}${color?'color:'+color:''}">${v}</span></div>`; }
+
+/* =====================================================================
+   RENDER: APRENDE (educación + consejos dinámicos)
+   ===================================================================== */
+function renderLearn(){
+  const tips=dynamicAdvice();
+  $('#view-learn').innerHTML=`
+    <h2 class="title">Aprende y optimiza</h2>
+    <div class="sub">Consejos según tus números + educación financiera</div>
+
+    <div class="section-h" style="margin-top:6px"><h3>Consejos para ti</h3></div>
+    ${tips.map(a=>`<div class="advice"><div class="em">${a.em}</div><div class="tx"><b>${a.t}</b>${a.d}</div></div>`).join('')}
+
+    <div class="section-h"><h3>Escuela FullGold</h3></div>
+    ${LESSONS.map(l=>`
+      <details class="accordion">
+        <summary>${l.icon} ${l.title}</summary>
+        <div class="body">${l.body}</div>
+      </details>`).join('')}
+
+    <p class="note">FullGold te enseña principios generales de finanzas personales. No sustituye la asesoría de un profesional certificado.</p>
+  `;
+}
+
+/* Consejo destacado para el home */
+function topAdvice(){ return dynamicAdvice()[0]; }
+
+/* Genera consejos según el estado real del usuario */
+function dynamicAdvice(){
+  const mk=thisMonth();
+  const inc=sumTx('income',mk), exp=sumTx('expense',mk);
+  const disp=inc-exp, rate= inc>0?(inc-exp)/inc:0;
+  const out=[];
+
+  if(S.tx.length===0){
+    out.push({em:'👋',t:'¡Bienvenido a FullGold!',d:'Empieza registrando tu sueldo y tus gastos. Con solo unos días de datos ya podré darte consejos personalizados.'});
+  }
+  if(disp<0){
+    out.push({em:'🚨',t:'Estás gastando más de lo que ganas',d:`Este mes vas ${fmt(disp)} en rojo. Revisa tus categorías más altas en Movimientos y recorta lo prescindible antes de fin de mes.`});
+  } else if(inc>0 && rate<0.1){
+    out.push({em:'⚠️',t:'Tu ahorro es muy bajo',d:`Ahorras el ${Math.round(rate*100)}% de tus ingresos. La meta sana es 20%. Aplica la regla 50/30/20: 50% necesidades, 30% gustos, 20% ahorro.`});
+  } else if(rate>=0.2){
+    out.push({em:'🏆',t:'¡Vas excelente!',d:`Ahorras el ${Math.round(rate*100)}% de tus ingresos. Considera poner ese excedente a trabajar: fondo de emergencia primero, luego inversión.`});
+  }
+  if(debtRemaining()>0){
+    out.push({em:'🎯',t:'Ataca tus deudas con estrategia',d:'Método avalancha: paga primero la deuda con mayor interés (ahorras más). Método bola de nieve: paga la más pequeña primero (motivación). Elige la que te funcione y sé constante.'});
+  }
+  if(monthlyInstallmentLoad()>0 && inc>0 && monthlyInstallmentLoad()/inc>0.3){
+    out.push({em:'💳',t:'Demasiado en cuotas',d:`Tus cuotas mensuales son el ${Math.round(monthlyInstallmentLoad()/inc*100)}% de tu ingreso. Sobre 30% es zona de riesgo: evita nuevas compras a plazo hasta bajar esa carga.`});
+  }
+  // Consejos generales de refuerzo
+  const GEN=[
+    {em:'🐷',t:'Págate a ti primero',d:'Apenas recibas tu sueldo, aparta el ahorro antes de gastar. Lo que no ves, no lo gastas.'},
+    {em:'🛟',t:'Fondo de emergencia',d:'Ten guardado el equivalente a 3–6 meses de tus gastos. Es tu escudo ante imprevistos sin caer en deudas.'},
+    {em:'🧾',t:'Regla de las 24 horas',d:'Antes de una compra impulsiva, espera un día. Si al día siguiente sigues queriéndolo, cómpralo.'},
+    {em:'📊',t:'Presupuesto 50/30/20',d:'50% necesidades, 30% deseos, 20% ahorro/deuda. Una guía simple para repartir tu sueldo.'}
+  ];
+  while(out.length<4) out.push(GEN[out.length % GEN.length]);
+  return out.slice(0,4);
+}
+
+const LESSONS=[
+  {icon:'📊',title:'La regla 50/30/20',body:`<p>Una forma simple de repartir tu ingreso mensual:</p>
+    <ul><li><b>50% Necesidades:</b> arriendo, comida, servicios, transporte.</li>
+    <li><b>30% Deseos:</b> salidas, ropa, streaming, hobbies.</li>
+    <li><b>20% Futuro:</b> ahorro, inversión y pago de deudas.</li></ul>
+    <p>Si tus necesidades pasan el 50%, busca dónde ajustar. Si puedes ahorrar más del 20%, mejor aún.</p>`},
+  {icon:'🐷',title:'Págate a ti primero',body:`<p>El error clásico es ahorrar "lo que sobra"… y nunca sobra. Dale vuelta: apenas te pagan, aparta tu ahorro <b>primero</b>, y vive con el resto.</p>
+    <p>Automatízalo si puedes: una transferencia programada a una cuenta separada el mismo día del sueldo.</p>`},
+  {icon:'🛟',title:'Fondo de emergencia',body:`<p>Es dinero guardado que solo tocas ante imprevistos reales: perder el trabajo, una urgencia médica, una reparación.</p>
+    <p><b>¿Cuánto?</b> Entre 3 y 6 meses de tus gastos. Empieza con una meta pequeña (1 mes) y súbela.</p>
+    <p>Tenerlo evita que caigas en deudas caras cuando la vida golpea.</p>`},
+  {icon:'💳',title:'Deuda buena vs. deuda mala',body:`<p><b>Deuda "mala":</b> financia cosas que pierden valor o se consumen (ropa, vacaciones, tecnología a 24 cuotas con interés). Te empobrece.</p>
+    <p><b>Deuda "buena":</b> financia algo que genera valor o ingresos (educación, una herramienta de trabajo, a veces una vivienda). Aun así, con medida.</p>
+    <p>Regla de oro: si no puedes pagarlo en pocas cuotas sin interés, quizá no puedes permitírtelo aún.</p>`},
+  {icon:'⚔️',title:'Cómo salir de deudas',body:`<p>Dos métodos probados:</p>
+    <ul><li><b>Avalancha:</b> paga primero la de <b>mayor interés</b>. Es lo más eficiente, ahorras más dinero.</li>
+    <li><b>Bola de nieve:</b> paga primero la <b>más pequeña</b>. Ganas motivación al eliminar deudas rápido.</li></ul>
+    <p>En ambos: paga el mínimo de todas y el excedente va a la deuda objetivo. Al liquidarla, pasa a la siguiente.</p>`},
+  {icon:'📈',title:'Interés compuesto: tu mejor amigo',body:`<p>Es "interés sobre el interés". Tu dinero genera ganancias, y esas ganancias generan más ganancias.</p>
+    <p>Ejemplo: $100.000 al 8% anual son 8.000 el primer año. El segundo año ganas sobre $108.000. Con el tiempo, la bola de nieve crece sola.</p>
+    <p><b>Clave:</b> empezar temprano y ser constante importa más que el monto. El tiempo hace el trabajo pesado.</p>`},
+  {icon:'🛒',title:'Compras inteligentes',body:`<p><ul><li><b>Distingue precio de costo:</b> lo barato que se rompe pronto sale caro.</li>
+    <li><b>Costo por uso:</b> $200.000 en zapatillas que usas 500 veces = $400/uso. A veces lo "caro" es económico.</li>
+    <li><b>Espera 24h</b> antes de compras impulsivas.</li>
+    <li><b>Cuotas sin interés</b> pueden convenir (mantienes tu dinero), pero solo si igual podías pagarlo al contado.</li></ul></p>`},
+  {icon:'🎯',title:'Metas financieras SMART',body:`<p>Una meta útil es <b>e</b>specífica, <b>m</b>edible, <b>a</b>lcanzable, <b>r</b>elevante y con <b>t</b>iempo definido.</p>
+    <p>Mal: "quiero ahorrar". Bien: "juntar $600.000 en 6 meses para un notebook, ahorrando $100.000 al mes".</p>
+    <p>Divide metas grandes en pasos mensuales y celebra los avances.</p>`}
+];
+
+/* =====================================================================
+   ACCIONES
+   ===================================================================== */
+function delTx(id){ if(confirm('¿Eliminar este movimiento?')){ S.tx=S.tx.filter(t=>t.id!==id); save(); rerender(); toast('Movimiento eliminado'); } }
+function delDebt(id){ if(confirm('¿Eliminar esta deuda?')){ S.debts=S.debts.filter(d=>d.id!==id); save(); rerender(); } }
+function delPlan(id){ if(confirm('¿Eliminar esta compra en cuotas?')){ S.plans=S.plans.filter(p=>p.id!==id); save(); rerender(); } }
+function payPlan(id){ const p=S.plans.find(x=>x.id===id); if(!p)return; p.paid=Math.min(+p.installments,(+p.paid||0)+1); save(); rerender(); toast('Cuota registrada ✓'); }
+function abonar(id){
+  const d=S.debts.find(x=>x.id===id); if(!d)return;
+  const v=prompt('¿Cuánto abonaste?'); if(v===null)return;
+  const n=parseFloat(v); if(isNaN(n)||n<=0)return;
+  d.paid=Math.min(+d.total,(+d.paid||0)+n); save(); rerender(); toast('Abono registrado ✓');
+}
+
+/* =====================================================================
+   MODALES / SHEETS
+   ===================================================================== */
+function sheet(html){
+  $('#modalRoot').innerHTML=`<div class="backdrop" onclick="if(event.target===this)closeSheet()">
+    <div class="sheet"><div class="grip"></div>${html}</div></div>`;
+}
+function closeSheet(){ $('#modalRoot').innerHTML=''; }
+
+/* --- Nuevo movimiento --- */
+let txType='expense', txCat=null;
+function openTx(){
+  txType='expense'; txCat=null;
+  sheet(`
+    <h3>Nuevo movimiento</h3>
+    <div class="seg type" style="margin:14px 0">
+      <button id="tExp" class="on exp" onclick="setTxType('expense')">− Gasto</button>
+      <button id="tInc" onclick="setTxType('income')">＋ Ingreso</button>
+    </div>
+    <label class="f">Monto</label>
+    <input class="field" id="txAmt" type="number" inputmode="numeric" placeholder="0" autofocus>
+    <label class="f">Categoría</label>
+    <div class="chips" id="txCats"></div>
+    <label class="f">Nota (opcional)</label>
+    <input class="field" id="txNote" placeholder="Ej: almuerzo con amigos">
+    <label class="f">Fecha</label>
+    <input class="field" id="txDate" type="date" value="${todayISO()}">
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">Cancelar</button>
+      <button class="btn" onclick="saveTx()">Guardar</button></div>
+  `);
+  renderTxCats();
+}
+function setTxType(t){ txType=t; txCat=null; $('#tExp').classList.toggle('on',t==='expense'); $('#tInc').classList.toggle('on',t==='income');
+  $('#tExp').classList.toggle('exp',t==='expense'); $('#tInc').classList.toggle('inc',t==='income'); renderTxCats(); }
+function renderTxCats(){
+  $('#txCats').innerHTML=CATS[txType].map(([e,n])=>`<div class="chip ${txCat===n?'on':''}" onclick="pickCat('${n}')">${e} ${n}</div>`).join('');
+}
+function pickCat(n){ txCat=n; renderTxCats(); }
+function saveTx(){
+  const amt=parseFloat($('#txAmt').value);
+  if(isNaN(amt)||amt<=0){ toast('Ingresa un monto válido'); return; }
+  if(!txCat){ toast('Elige una categoría'); return; }
+  S.tx.push({id:uid(),type:txType,amount:amt,cat:txCat,note:$('#txNote').value.trim(),date:$('#txDate').value||todayISO()});
+  save(); closeSheet(); rerender(); toast('Guardado ✓');
+}
+
+/* --- Nueva compra en cuotas --- */
+function openPlan(){
+  sheet(`
+    <h3>Compra en cuotas</h3>
+    <label class="f">¿Qué compraste?</label>
+    <input class="field" id="plName" placeholder="Ej: Refrigerador" autofocus>
+    <label class="f">Precio total</label>
+    <input class="field" id="plTotal" type="number" inputmode="numeric" placeholder="0">
+    <label class="f">Número de cuotas</label>
+    <input class="field" id="plN" type="number" inputmode="numeric" placeholder="12" value="12">
+    <label class="f">Cuotas ya pagadas</label>
+    <input class="field" id="plPaid" type="number" inputmode="numeric" placeholder="0" value="0">
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">Cancelar</button>
+      <button class="btn" onclick="savePlan()">Guardar</button></div>
+  `);
+}
+function savePlan(){
+  const name=$('#plName').value.trim(), total=parseFloat($('#plTotal').value), n=parseInt($('#plN').value);
+  if(!name){ toast('Escribe qué compraste'); return; }
+  if(isNaN(total)||total<=0||isNaN(n)||n<=0){ toast('Revisa precio y cuotas'); return; }
+  S.plans.push({id:uid(),name,total,installments:n,paid:Math.min(n,parseInt($('#plPaid').value)||0),start:todayISO()});
+  save(); closeSheet(); rerender(); toast('Compra registrada ✓');
+}
+
+/* --- Nueva deuda --- */
+function openDebt(){
+  sheet(`
+    <h3>Nueva deuda</h3>
+    <label class="f">Nombre</label>
+    <input class="field" id="dbName" placeholder="Ej: Crédito de consumo" autofocus>
+    <label class="f">Monto total</label>
+    <input class="field" id="dbTotal" type="number" inputmode="numeric" placeholder="0">
+    <label class="f">Ya pagado (opcional)</label>
+    <input class="field" id="dbPaid" type="number" inputmode="numeric" placeholder="0" value="0">
+    <label class="f">Interés mensual % (opcional)</label>
+    <input class="field" id="dbRate" type="number" inputmode="decimal" placeholder="0">
+    <label class="f">Día de vencimiento (opcional)</label>
+    <input class="field" id="dbDue" type="number" inputmode="numeric" placeholder="Ej: 5" min="1" max="31">
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">Cancelar</button>
+      <button class="btn" onclick="saveDebt()">Guardar</button></div>
+  `);
+}
+function saveDebt(){
+  const name=$('#dbName').value.trim(), total=parseFloat($('#dbTotal').value);
+  if(!name){ toast('Escribe el nombre'); return; }
+  if(isNaN(total)||total<=0){ toast('Ingresa el monto'); return; }
+  S.debts.push({id:uid(),name,total,paid:parseFloat($('#dbPaid').value)||0,
+    rate:parseFloat($('#dbRate').value)||0,dueDay:parseInt($('#dbDue').value)||0});
+  save(); closeSheet(); rerender(); toast('Deuda registrada ✓');
+}
+
+/* --- FAB según pestaña --- */
+function fabAction(){
+  if(currentTab==='debt'){ openPlan(); }
+  else if(currentTab==='sim'||currentTab==='learn'){ openTx(); }
+  else openTx();
+}
+
+/* =====================================================================
+   AJUSTES
+   ===================================================================== */
+function openSettings(){
+  sheet(`
+    <h3>Ajustes</h3>
+    <label class="f">Moneda</label>
+    <select class="field" id="setCur">
+      ${Object.keys(CUR).map(c=>`<option value="${c}" ${S.settings.currency===c?'selected':''}>${c} (${CUR[c].sym})</option>`).join('')}
+    </select>
+    <label class="f">Seguridad</label>
+    <button class="btn ghost" onclick="togglePin()" style="justify-content:flex-start">
+      🔒 ${S.settings.pin?'Cambiar / quitar PIN':'Proteger con PIN de 4 dígitos'}
+    </button>
+    <label class="f">Tus datos (privados, en este dispositivo)</label>
+    <button class="btn dark" onclick="exportData()">⬇️ Descargar copia de seguridad</button>
+    <button class="btn ghost" style="margin-top:8px" onclick="$('#importFile').click()">⬆️ Restaurar copia</button>
+    <input type="file" id="importFile" accept="application/json" class="hidden" onchange="importData(event)">
+    <button class="btn danger" style="margin-top:16px" onclick="wipe()">🗑️ Borrar todos mis datos</button>
+    <p class="note" style="margin-top:16px">🔐 FullGold guarda todo <b>solo en este dispositivo</b> (localStorage). No enviamos tus datos a ningún servidor ni a internet. Haz copias de seguridad de vez en cuando.</p>
+    <div class="btn-row"><button class="btn" onclick="applySettings()">Listo</button></div>
+  `);
+}
+function applySettings(){ S.settings.currency=$('#setCur').value; save(); closeSheet(); rerender(); toast('Ajustes guardados'); }
+
+function exportData(){
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='fullgold-backup-'+todayISO()+'.json'; a.click();
+  URL.revokeObjectURL(url); toast('Copia descargada ✓');
+}
+function importData(ev){
+  const file=ev.target.files[0]; if(!file)return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ const d=JSON.parse(r.result);
+    if(!d.settings||!Array.isArray(d.tx)) throw 0;
+    if(confirm('Esto reemplazará tus datos actuales. ¿Continuar?')){ S=Object.assign(DEFAULTS(),d); save(); closeSheet(); applyTheme(); rerender(); toast('Datos restaurados ✓'); }
+  }catch(e){ toast('Archivo no válido'); } };
+  r.readAsText(file);
+}
+function wipe(){
+  if(confirm('¿Borrar TODOS tus datos de FullGold? Esto no se puede deshacer.')){
+    if(confirm('Última confirmación: se eliminará todo.')){
+      S=DEFAULTS(); save(); closeSheet(); applyTheme(); rerender(); toast('Datos borrados');
+    }
+  }
+}
+
+/* =====================================================================
+   PIN / LOCK  (nota: es una capa de disuasión, no cifrado real)
+   ===================================================================== */
+function hashPin(p){ let h=5381; for(const c of ('fg'+p)) h=((h<<5)+h+c.charCodeAt(0))>>>0; return h.toString(36); }
+function togglePin(){
+  if(S.settings.pin){
+    if(confirm('¿Quitar el PIN de seguridad?')){ S.settings.pin=null; save(); toast('PIN eliminado'); openSettings(); }
+    else { setNewPin(); }
+  } else setNewPin();
+}
+function setNewPin(){
+  const p=prompt('Escribe un PIN de 4 dígitos:');
+  if(p===null)return;
+  if(!/^\d{4}$/.test(p)){ toast('Debe ser 4 dígitos'); return; }
+  const p2=prompt('Confirma el PIN:');
+  if(p2!==p){ toast('No coincide'); return; }
+  S.settings.pin=hashPin(p); save(); toast('PIN activado 🔒'); openSettings();
+}
+let lockBuf='';
+function showLock(){
+  $('#app').classList.add('hidden'); $('#lock').classList.remove('hidden');
+  lockBuf=''; drawLockDots();
+  $('#lockPad').innerHTML=[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map(k=>
+    k===''?'<span></span>':`<button onclick="lockKey('${k}')">${k}</button>`).join('');
+}
+function lockKey(k){
+  $('#lockErr').textContent='';
+  if(k==='⌫'){ lockBuf=lockBuf.slice(0,-1); }
+  else if(lockBuf.length<4){ lockBuf+=k; }
+  drawLockDots();
+  if(lockBuf.length===4){
+    setTimeout(()=>{
+      if(hashPin(lockBuf)===S.settings.pin){ $('#lock').classList.add('hidden'); $('#app').classList.remove('hidden'); }
+      else { $('#lockErr').textContent='PIN incorrecto'; lockBuf=''; drawLockDots(); }
+    },120);
+  }
+}
+function drawLockDots(){ $$('#lockDots i').forEach((d,i)=>d.classList.toggle('on',i<lockBuf.length)); }
+
+/* =====================================================================
+   NAVEGACIÓN / UTILIDADES
+   ===================================================================== */
+let currentTab='home';
+const RENDERERS={home:renderHome,money:renderMoney,debt:renderDebt,sim:renderSim,learn:renderLearn};
+function go(tab){
+  currentTab=tab;
+  $$('.view').forEach(v=>v.classList.add('hidden'));
+  $('#view-'+tab).classList.remove('hidden');
+  $$('nav.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+  RENDERERS[tab]();
+  window.scrollTo(0,0);
+}
+function rerender(){ RENDERERS[currentTab](); }
+
+function toast(msg){
+  const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),1800);
+}
+function esc(s){ return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function todayISO(){ const d=NOW(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function emptyBox(e,t,s){ return `<div class="empty"><span class="e">${e}</span>${t}<div style="font-size:12.5px;margin-top:4px;opacity:.8">${s}</div></div>`; }
+
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme',S.settings.theme);
+  $('#btnTheme').textContent = S.settings.theme==='dark'?'☀️':'🌙';
+  $('meta[name=theme-color]').setAttribute('content', S.settings.theme==='dark'?'#0e0d0a':'#c99700');
+}
+
+/* ---------- Init ---------- */
+$$('nav.tabs button').forEach(b=>b.onclick=()=>go(b.dataset.tab));
+$('#fab').onclick=fabAction;
+$('#btnSettings').onclick=openSettings;
+$('#btnTheme').onclick=()=>{ S.settings.theme=S.settings.theme==='dark'?'light':'dark'; save(); applyTheme(); };
+
+applyTheme();
+if(S.settings.pin) showLock();
+go('home');
+</script>
+</body>
+</html>
