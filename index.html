@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="FullGold">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#c99700">
+<link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%23111'/%3E%3Ctext x='90' y='128' font-size='104' font-family='Georgia,serif' font-weight='bold' fill='%23e8b923' text-anchor='middle'%3EFG%3C/text%3E%3C/svg%3E">
 <style>
   :root{
@@ -1044,6 +1045,11 @@ $('#btnTheme').onclick=()=>{ S.settings.theme=S.settings.theme==='dark'?'light':
 applyTheme();
 if(S.settings.pin) showLock();
 go('home');
+
+/* Service worker: hace la app instalable y usable sin conexión (solo cachea archivos propios) */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
 </script>
 </body>
 </html>
