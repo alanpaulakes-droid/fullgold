@@ -57,14 +57,14 @@
     --shadow:0 1px 3px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%}
+  html{min-height:100%}
   body{
     font-family:var(--font);
     background:var(--bg);
     color:var(--text);
     line-height:1.5;
-    padding-bottom:calc(78px + env(safe-area-inset-bottom));
-    overscroll-behavior-y:none;
+    min-height:100vh;
+    -webkit-overflow-scrolling:touch;
   }
   .hidden{display:none!important}
   button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
@@ -94,7 +94,7 @@
   }
   .icon-btn:active{transform:scale(.94)}
 
-  main{max-width:720px;margin:0 auto;padding:16px 16px 24px}
+  main{max-width:720px;margin:0 auto;padding:16px 16px calc(170px + env(safe-area-inset-bottom))}
   .view{animation:fade .25s ease}
   @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
