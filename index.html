@@ -311,10 +311,11 @@ const $$ = (s,el=document)=>[...el.querySelectorAll(s)];
 /* ---------- Estado ---------- */
 const DEFAULTS = () => ({
   settings:{ currency:'CLP', theme:'light', pin:null, locale:'es-CL' },
-  tx:[],       // {id,type:'income'|'expense',amount,cat,note,date}
+  tx:[],       // {id,type:'income'|'expense',amount,cat,note,date,acct}
   debts:[],    // {id,name,total,paid,rate,dueDay,note}
   plans:[],    // cuotas: {id,name,total,installments,paid,start,note}
   fixed:[],    // gastos fijos mensuales: {id,name,amount,dueDay,cat,lastPaid:'YYYY-MM'}
+  accounts:[], // cuentas/monederos: {id,name,type:'cash'|'debit'|'credit'|'saving',icon,limit,opening}
   goals:[]     // {id,name,target,saved}
 });
 let S = load();
@@ -352,6 +353,23 @@ const CATS = {
            ['💊','Salud'],['🎮','Ocio'],['👕','Ropa'],['📚','Educación'],['💳','Cuotas'],['📱','Suscripciones'],['🔧','Otros']]
 };
 function catIcon(type,name){ const l=(CATS[type]||[]).find(c=>c[1]===name); return l?l[0]:(type==='income'?'💰':'💸'); }
+
+/* ---------- Cuentas / monederos ---------- */
+const ACCT_TYPES = {
+  cash:  {lbl:'Efectivo', em:'💵'},
+  debit: {lbl:'Débito',   em:'💳'},
+  credit:{lbl:'Crédito',  em:'🏦'},
+  saving:{lbl:'Ahorro',   em:'🐷'}
+};
+const ACCT_ICONS = ['💵','💳','🏦','🐷','💰','🪙','🏧','👛','💼','📈'];
+function acctById(id){ return S.accounts.find(a=>a.id===id); }
+function acctIncome(id){ return S.tx.filter(t=>t.acct===id&&t.type==='income').reduce((a,t)=>a+ +t.amount,0); }
+function acctExpense(id){ return S.tx.filter(t=>t.acct===id&&t.type==='expense').reduce((a,t)=>a+ +t.amount,0); }
+function acctUsed(a){ return Math.max(0, acctExpense(a.id) - acctIncome(a.id)); } // deuda usada en crédito
+function acctBalance(a){
+  if(a.type==='credit') return (+a.limit||0) - acctUsed(a); // cupo disponible
+  return (+a.opening||0) + acctIncome(a.id) - acctExpense(a.id); // saldo disponible
+}
 
 /* =====================================================================
    CÁLCULOS
@@ -415,6 +433,11 @@ function renderHome(){
       </div>
     </div>
 
+    <div class="section-h"><h3>Mis cuentas</h3><span class="link" onclick="openAcct()">+ Agregar</span></div>
+    <div class="card">
+      ${S.accounts.length? S.accounts.map(acctRow).join('') : emptyBox('💳','Sin cuentas todavía','Agrega tu efectivo, débito o tarjeta de crédito para ver desde dónde gastas')}
+    </div>
+
     ${upcoming.length?`
     <div class="section-h"><h3>Próximos pagos</h3></div>
     <div class="card">
@@ -435,12 +458,43 @@ function renderHome(){
 }
 
 function txRow(t){
+  const ac = t.acct? acctById(t.acct) : null;
   return `<div class="item">
     <div class="ico">${catIcon(t.type,t.cat)}</div>
     <div class="m"><div class="t">${esc(t.cat)}${t.note?' · '+esc(t.note):''}</div>
-      <div class="s">${fdate(t.date)}</div></div>
+      <div class="s">${fdate(t.date)}${ac?' · '+(ac.icon||'💳')+' '+esc(ac.name):''}</div></div>
     <div class="amt ${t.type==='income'?'green':'red'}">${t.type==='income'?'+':'−'}${fmt(t.amount)}</div>
     <button class="del" onclick="delTx('${t.id}')">✕</button>
+  </div>`;
+}
+
+function acctRow(a){
+  const t = ACCT_TYPES[a.type]||ACCT_TYPES.cash;
+  if(a.type==='credit'){
+    const usado=acctUsed(a), limit=+a.limit||0, disp=limit-usado;
+    const pct = limit>0 ? Math.min(100,Math.round(usado/limit*100)) : 0;
+    return `<div class="item" style="flex-wrap:wrap">
+      <div class="ico">${a.icon||t.em}</div>
+      <div class="m"><div class="t">${esc(a.name)} <span class="tag">Crédito</span></div>
+        <div class="s">Cupo ${fmt(limit)} · usado ${fmt(usado)}</div></div>
+      <div class="amt ${disp<=0?'red':'green'}">${fmt(disp)}</div>
+      <div style="flex-basis:100%"><div class="progress ${pct>=80?'red':''}"><i style="width:${pct}%"></i></div></div>
+      <div style="flex-basis:100%;display:flex;gap:8px;margin-top:9px">
+        <button class="btn ghost" style="padding:8px" onclick="openAcct('${a.id}')">✎ Editar</button>
+        <button class="btn ghost" style="padding:8px;max-width:44px" onclick="delAcct('${a.id}')">🗑️</button>
+      </div>
+    </div>`;
+  }
+  const bal=acctBalance(a);
+  return `<div class="item" style="flex-wrap:wrap">
+    <div class="ico">${a.icon||t.em}</div>
+    <div class="m"><div class="t">${esc(a.name)} <span class="tag">${t.lbl}</span></div>
+      <div class="s">Saldo disponible${a.opening?' · inicial '+fmt(a.opening):''}</div></div>
+    <div class="amt ${bal<0?'red':''}">${fmt(bal)}</div>
+    <div style="flex-basis:100%;display:flex;gap:8px;margin-top:9px">
+      <button class="btn ghost" style="padding:8px" onclick="openAcct('${a.id}')">✎ Editar</button>
+      <button class="btn ghost" style="padding:8px;max-width:44px" onclick="delAcct('${a.id}')">🗑️</button>
+    </div>
   </div>`;
 }
 
@@ -475,19 +529,27 @@ function monthlyDebt(d){ return d.rate?( +d.total*0.1 ):(+d.total*0.1); } // est
 /* =====================================================================
    RENDER: MOVIMIENTOS
    ===================================================================== */
-let moneyFilter='all';
+let moneyFilter='all', moneyAcct='all';
 function renderMoney(){
   const mk=thisMonth();
+  if(moneyAcct!=='all' && !acctById(moneyAcct)) moneyAcct='all';
   const list=[...S.tx].sort((a,b)=>new Date(b.date)-new Date(a.date))
-    .filter(t=>moneyFilter==='all'||t.type===moneyFilter);
+    .filter(t=>moneyFilter==='all'||t.type===moneyFilter)
+    .filter(t=>moneyAcct==='all'||t.acct===moneyAcct);
   const byCat={};
-  S.tx.filter(t=>t.type==='expense'&&monthKey(t.date)===mk).forEach(t=>{byCat[t.cat]=(byCat[t.cat]||0)+ +t.amount;});
+  S.tx.filter(t=>t.type==='expense'&&monthKey(t.date)===mk&&(moneyAcct==='all'||t.acct===moneyAcct)).forEach(t=>{byCat[t.cat]=(byCat[t.cat]||0)+ +t.amount;});
   const cats=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,5);
   const maxCat=cats.length?cats[0][1]:1;
 
   $('#view-money').innerHTML=`
     <h2 class="title">Movimientos</h2>
     <div class="sub">Ingresos y gastos de ${monthName()}</div>
+
+    ${S.accounts.length?`
+    <div class="chips" style="margin-bottom:12px">
+      <div class="chip ${moneyAcct==='all'?'on':''}" onclick="setMA('all')">Todas las cuentas</div>
+      ${S.accounts.map(a=>`<div class="chip ${moneyAcct===a.id?'on':''}" onclick="setMA('${a.id}')">${a.icon||'💳'} ${esc(a.name)}</div>`).join('')}
+    </div>`:''}
 
     ${cats.length?`
     <div class="card">
@@ -512,6 +574,7 @@ function renderMoney(){
   `;
 }
 function setMF(f){ moneyFilter=f; renderMoney(); }
+function setMA(a){ moneyAcct=a; renderMoney(); }
 function monthName(){ return NOW().toLocaleDateString(S.settings.locale||'es-CL',{month:'long',year:'numeric'}); }
 
 /* =====================================================================
@@ -797,9 +860,10 @@ function sheet(html){
 function closeSheet(){ $('#modalRoot').innerHTML=''; }
 
 /* --- Nuevo movimiento --- */
-let txType='expense', txCat=null;
+let txType='expense', txCat=null, txAcct=null;
 function openTx(){
   txType='expense'; txCat=null;
+  txAcct = S.accounts.length? S.accounts[0].id : null;
   sheet(`
     <h3>Nuevo movimiento</h3>
     <div class="seg type" style="margin:14px 0">
@@ -810,6 +874,8 @@ function openTx(){
     <input class="field" id="txAmt" type="number" inputmode="numeric" placeholder="0" autofocus>
     <label class="f">Categoría</label>
     <div class="chips" id="txCats"></div>
+    ${S.accounts.length?`<label class="f">¿Desde qué cuenta?</label>
+    <div class="chips" id="txAccts"></div>`:''}
     <label class="f">Nota (opcional)</label>
     <input class="field" id="txNote" placeholder="Ej: almuerzo con amigos">
     <label class="f">Fecha</label>
@@ -817,7 +883,7 @@ function openTx(){
     <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">Cancelar</button>
       <button class="btn" onclick="saveTx()">Guardar</button></div>
   `);
-  renderTxCats();
+  renderTxCats(); renderTxAccts();
 }
 function setTxType(t){ txType=t; txCat=null; $('#tExp').classList.toggle('on',t==='expense'); $('#tInc').classList.toggle('on',t==='income');
   $('#tExp').classList.toggle('exp',t==='expense'); $('#tInc').classList.toggle('inc',t==='income'); renderTxCats(); }
@@ -825,12 +891,81 @@ function renderTxCats(){
   $('#txCats').innerHTML=CATS[txType].map(([e,n])=>`<div class="chip ${txCat===n?'on':''}" onclick="pickCat('${n}')">${e} ${n}</div>`).join('');
 }
 function pickCat(n){ txCat=n; renderTxCats(); }
+function renderTxAccts(){
+  const box=$('#txAccts'); if(!box) return;
+  box.innerHTML=S.accounts.map(a=>`<div class="chip ${txAcct===a.id?'on':''}" onclick="pickTxAcct('${a.id}')">${a.icon||'💳'} ${esc(a.name)}</div>`).join('');
+}
+function pickTxAcct(id){ txAcct = txAcct===id? null : id; renderTxAccts(); }
 function saveTx(){
   const amt=parseFloat($('#txAmt').value);
   if(isNaN(amt)||amt<=0){ toast('Ingresa un monto válido'); return; }
   if(!txCat){ toast('Elige una categoría'); return; }
-  S.tx.push({id:uid(),type:txType,amount:amt,cat:txCat,note:$('#txNote').value.trim(),date:$('#txDate').value||todayISO()});
+  S.tx.push({id:uid(),type:txType,amount:amt,cat:txCat,note:$('#txNote').value.trim(),date:$('#txDate').value||todayISO(),acct:txAcct});
   save(); closeSheet(); rerender(); toast('Guardado ✓');
+}
+
+/* --- Cuentas / monederos --- */
+let acctIconSel=null;
+function openAcct(id){
+  const a = id? acctById(id) : null;
+  const type = a? a.type : 'debit';
+  acctIconSel = a? a.icon : null;
+  sheet(`
+    <h3>${a?'Editar cuenta':'Nueva cuenta'}</h3>
+    <p class="hint" style="margin-top:4px">Divide tu dinero: efectivo, débito, tarjeta de crédito con su cupo… Así ves desde dónde gastas.</p>
+    <label class="f">Nombre</label>
+    <input class="field" id="acName" placeholder="Ej: Tarjeta Falabella" value="${a?esc(a.name):''}" autofocus>
+    <label class="f">Tipo de cuenta</label>
+    <select class="field" id="acType" onchange="acctTypeChange()">
+      ${Object.entries(ACCT_TYPES).map(([k,v])=>`<option value="${k}" ${type===k?'selected':''}>${v.em} ${v.lbl}</option>`).join('')}
+    </select>
+    <div id="acCupoBox" class="${type==='credit'?'':'hidden'}">
+      <label class="f">Cupo total de la tarjeta</label>
+      <input class="field" id="acLimit" type="number" inputmode="numeric" placeholder="0" value="${a&&a.limit?a.limit:''}">
+      <p class="hint">Lo que ya gastes con esta tarjeta descuenta del cupo disponible.</p>
+    </div>
+    <div id="acOpenBox" class="${type==='credit'?'hidden':''}">
+      <label class="f">Saldo actual / monto que le dejas</label>
+      <input class="field" id="acOpening" type="number" inputmode="numeric" placeholder="0" value="${a&&a.opening?a.opening:''}">
+      <p class="hint">El dinero que hay hoy en esta cuenta. Ingresos y gastos que le asignes lo van moviendo.</p>
+    </div>
+    <label class="f">Ícono</label>
+    <div class="chips" id="acIcons"></div>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">Cancelar</button>
+      <button class="btn" onclick="saveAcct('${a?a.id:''}')">Guardar</button></div>
+  `);
+  renderAcctIcons();
+}
+function acctTypeChange(){
+  const t=$('#acType').value;
+  $('#acCupoBox').classList.toggle('hidden',t!=='credit');
+  $('#acOpenBox').classList.toggle('hidden',t==='credit');
+}
+function renderAcctIcons(){
+  $('#acIcons').innerHTML=ACCT_ICONS.map(e=>`<div class="chip ${acctIconSel===e?'on':''}" onclick="pickAcctIcon('${e}')">${e}</div>`).join('');
+}
+function pickAcctIcon(e){ acctIconSel=e; renderAcctIcons(); }
+function saveAcct(id){
+  const name=$('#acName').value.trim();
+  if(!name){ toast('Escribe un nombre'); return; }
+  const type=$('#acType').value;
+  const limit=parseFloat($('#acLimit')?.value)||0;
+  const opening=parseFloat($('#acOpening')?.value)||0;
+  if(type==='credit' && limit<=0){ toast('Ingresa el cupo de la tarjeta'); return; }
+  const icon=acctIconSel||ACCT_TYPES[type].em;
+  if(id){
+    const a=acctById(id); if(a){ a.name=name; a.type=type; a.limit=limit; a.opening=opening; a.icon=icon; }
+  } else {
+    S.accounts.push({id:uid(),name,type,limit,opening,icon});
+  }
+  save(); closeSheet(); rerender(); toast('Cuenta guardada ✓');
+}
+function delAcct(id){
+  if(confirm('¿Eliminar esta cuenta? Los movimientos que tenía quedarán sin cuenta asignada (no se borran).')){
+    S.accounts=S.accounts.filter(a=>a.id!==id);
+    S.tx.forEach(t=>{ if(t.acct===id) t.acct=null; });
+    save(); rerender(); toast('Cuenta eliminada');
+  }
 }
 
 /* --- Nueva compra en cuotas --- */
