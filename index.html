@@ -313,6 +313,7 @@ const DEFAULTS = () => ({
   tx:[],       // {id,type:'income'|'expense',amount,cat,note,date}
   debts:[],    // {id,name,total,paid,rate,dueDay,note}
   plans:[],    // cuotas: {id,name,total,installments,paid,start,note}
+  fixed:[],    // gastos fijos mensuales: {id,name,amount,dueDay,cat,lastPaid:'YYYY-MM'}
   goals:[]     // {id,name,target,saved}
 });
 let S = load();
@@ -368,6 +369,14 @@ function plansRemaining(){
 function monthlyInstallmentLoad(){
   // suma de cuotas mensuales de planes activos
   return S.plans.reduce((a,p)=> (+p.paid<+p.installments? a+(+p.total)/(+p.installments):a),0);
+}
+function monthlyFixedLoad(){
+  // suma de gastos fijos mensuales (plan del teléfono, universidad, etc.)
+  return S.fixed.reduce((a,f)=>a+ +f.amount,0);
+}
+function fixedIsPaid(f){ return f.lastPaid===thisMonth(); }
+function pendingFixedTotal(){
+  return S.fixed.filter(f=>!fixedIsPaid(f)).reduce((a,f)=>a+ +f.amount,0);
 }
 
 /* =====================================================================
@@ -437,6 +446,13 @@ function txRow(t){
 function upcomingPayments(){
   const list=[];
   const today = NOW().getDate();
+  S.fixed.forEach(f=>{
+    if(fixedIsPaid(f)) return; // ya pagado este mes
+    const day=+f.dueDay||1;
+    const diff = day>=today ? day-today : day-today+30;
+    list.push({name:f.name,em:'📌',amount:+f.amount,
+      when: diff===0?'Vence hoy':diff===1?'Vence mañana':'En '+diff+' días', sort:diff});
+  });
   S.debts.forEach(d=>{
     if((+d.paid||0)>=+d.total) return;
     if(d.dueDay){
@@ -508,6 +524,13 @@ function renderDebt(){
     <div class="stat-grid" style="margin-top:0">
       <div class="stat"><div class="k">📋 Deuda total</div><div class="v red">${fmt(debtRemaining())}</div></div>
       <div class="stat"><div class="k">💳 Pago mensual cuotas</div><div class="v gold">${fmt(monthlyInstallmentLoad())}</div></div>
+      <div class="stat"><div class="k">📌 Gastos fijos al mes</div><div class="v blue">${fmt(monthlyFixedLoad())}</div></div>
+      <div class="stat"><div class="k">💰 Compromiso mensual</div><div class="v ${monthlyFixedLoad()+monthlyInstallmentLoad()>0?'red':'green'}">${fmt(monthlyFixedLoad()+monthlyInstallmentLoad())}</div></div>
+    </div>
+
+    <div class="section-h"><h3>Gastos fijos mensuales</h3><span class="link" onclick="openFixed()">+ Agregar</span></div>
+    <div class="card">
+      ${S.fixed.length? S.fixed.map(fixedRow).join('') : emptyBox('📌','Sin gastos fijos','Plan del celular, universidad, gimnasio…')}
     </div>
 
     <div class="section-h"><h3>Compras en cuotas</h3><span class="link" onclick="openPlan()">+ Agregar</span></div>
@@ -534,6 +557,19 @@ function planRow(p){
     <div style="flex-basis:100%;display:flex;gap:8px;margin-top:9px">
       ${done?'':`<button class="btn ghost" style="padding:8px" onclick="payPlan('${p.id}')">✓ Pagar cuota</button>`}
       <button class="btn ghost" style="padding:8px;max-width:44px" onclick="delPlan('${p.id}')">🗑️</button>
+    </div>
+  </div>`;
+}
+function fixedRow(f){
+  const paid=fixedIsPaid(f);
+  return `<div class="item" style="flex-wrap:wrap">
+    <div class="ico">${catIcon('expense',f.cat)}</div>
+    <div class="m"><div class="t">${esc(f.name)}</div>
+      <div class="s">${fmt(f.amount)}/mes${f.dueDay?' · paga el día '+f.dueDay:''} ${paid?'<span class="tag ok">Pagado este mes</span>':'<span class="tag soon">Pendiente</span>'}</div></div>
+    <div class="amt ${paid?'green':'red'}">${fmt(f.amount)}</div>
+    <div style="flex-basis:100%;display:flex;gap:8px;margin-top:9px">
+      ${paid?'':`<button class="btn ghost" style="padding:8px" onclick="payFixed('${f.id}')">✓ Pagar este mes</button>`}
+      <button class="btn ghost" style="padding:8px;max-width:44px" onclick="delFixed('${f.id}')">🗑️</button>
     </div>
   </div>`;
 }
@@ -589,7 +625,8 @@ function runSim(){
   const out=$('#simOut'); if(!out) return;
   if(price<=0){ out.innerHTML=''; return; }
   const mk=thisMonth();
-  const disponible = sumTx('income',mk)-sumTx('expense',mk); // flujo libre del mes
+  const pendFixed = pendingFixedTotal(); // fijos del mes aún no pagados
+  const disponible = sumTx('income',mk)-sumTx('expense',mk)-pendFixed; // flujo libre real del mes
   const balance = balanceTotal();
   let rows='', monthly=price, total=price, verdict, vclass, vem, extra='';
 
@@ -626,6 +663,7 @@ function runSim(){
   out.innerHTML=`<div class="simres">
     <div class="verdict ${vclass}">${vem} ${verdict}</div>
     ${rows}
+    ${pendFixed>0?`<div class="simrow"><span>Gastos fijos pendientes del mes</span><span class="v" style="color:var(--amber)">−${fmt(pendFixed)}</span></div>`:''}
     <div class="simrow"><span>Tu excedente mensual actual</span><span class="v" style="color:${disponible<0?'var(--red)':'var(--green)'}">${fmt(disponible)}</span></div>
     <p class="hint" style="margin-top:12px">${extra}</p>
   </div>`;
@@ -678,6 +716,10 @@ function dynamicAdvice(){
   if(debtRemaining()>0){
     out.push({em:'🎯',t:'Ataca tus deudas con estrategia',d:'Método avalancha: paga primero la deuda con mayor interés (ahorras más). Método bola de nieve: paga la más pequeña primero (motivación). Elige la que te funcione y sé constante.'});
   }
+  const fixedLoad=monthlyFixedLoad();
+  if(fixedLoad>0 && inc>0 && (fixedLoad+monthlyInstallmentLoad())/inc>0.5){
+    out.push({em:'📌',t:'Tus compromisos fijos pesan mucho',d:`Entre gastos fijos y cuotas comprometes el ${Math.round((fixedLoad+monthlyInstallmentLoad())/inc*100)}% de tu ingreso antes de empezar el mes. Revisa qué plan o suscripción puedes renegociar o recortar.`});
+  }
   if(monthlyInstallmentLoad()>0 && inc>0 && monthlyInstallmentLoad()/inc>0.3){
     out.push({em:'💳',t:'Demasiado en cuotas',d:`Tus cuotas mensuales son el ${Math.round(monthlyInstallmentLoad()/inc*100)}% de tu ingreso. Sobre 30% es zona de riesgo: evita nuevas compras a plazo hasta bajar esa carga.`});
   }
@@ -729,6 +771,14 @@ function delTx(id){ if(confirm('¿Eliminar este movimiento?')){ S.tx=S.tx.filter
 function delDebt(id){ if(confirm('¿Eliminar esta deuda?')){ S.debts=S.debts.filter(d=>d.id!==id); save(); rerender(); } }
 function delPlan(id){ if(confirm('¿Eliminar esta compra en cuotas?')){ S.plans=S.plans.filter(p=>p.id!==id); save(); rerender(); } }
 function payPlan(id){ const p=S.plans.find(x=>x.id===id); if(!p)return; p.paid=Math.min(+p.installments,(+p.paid||0)+1); save(); rerender(); toast('Cuota registrada ✓'); }
+function delFixed(id){ if(confirm('¿Eliminar este gasto fijo?')){ S.fixed=S.fixed.filter(f=>f.id!==id); save(); rerender(); } }
+function payFixed(id){
+  const f=S.fixed.find(x=>x.id===id); if(!f||fixedIsPaid(f))return;
+  // se registra como gasto del mes y queda marcado como pagado
+  S.tx.push({id:uid(),type:'expense',amount:+f.amount,cat:f.cat||'Servicios',note:f.name,date:todayISO()});
+  f.lastPaid=thisMonth();
+  save(); rerender(); toast('Pago registrado ✓');
+}
 function abonar(id){
   const d=S.debts.find(x=>x.id===id); if(!d)return;
   const v=prompt('¿Cuánto abonaste?'); if(v===null)return;
@@ -804,6 +854,34 @@ function savePlan(){
   if(isNaN(total)||total<=0||isNaN(n)||n<=0){ toast('Revisa precio y cuotas'); return; }
   S.plans.push({id:uid(),name,total,installments:n,paid:Math.min(n,parseInt($('#plPaid').value)||0),start:todayISO()});
   save(); closeSheet(); rerender(); toast('Compra registrada ✓');
+}
+
+/* --- Nuevo gasto fijo mensual --- */
+function openFixed(){
+  sheet(`
+    <h3>Gasto fijo mensual</h3>
+    <p class="hint" style="margin-top:4px">Pagos que se repiten igual cada mes: plan del celular, universidad, gimnasio, cuota del trabajo…</p>
+    <label class="f">Nombre</label>
+    <input class="field" id="fxName" placeholder="Ej: Plan del celular" autofocus>
+    <label class="f">Monto mensual</label>
+    <input class="field" id="fxAmt" type="number" inputmode="numeric" placeholder="0">
+    <label class="f">Día del mes en que lo pagas</label>
+    <input class="field" id="fxDue" type="number" inputmode="numeric" placeholder="Ej: 5" min="1" max="31">
+    <label class="f">Categoría del gasto</label>
+    <select class="field" id="fxCat">
+      ${CATS.expense.map(([e,n])=>`<option value="${n}" ${n==='Servicios'?'selected':''}>${e} ${n}</option>`).join('')}
+    </select>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">Cancelar</button>
+      <button class="btn" onclick="saveFixed()">Guardar</button></div>
+  `);
+}
+function saveFixed(){
+  const name=$('#fxName').value.trim(), amt=parseFloat($('#fxAmt').value);
+  if(!name){ toast('Escribe el nombre'); return; }
+  if(isNaN(amt)||amt<=0){ toast('Ingresa el monto mensual'); return; }
+  let due=parseInt($('#fxDue').value)||0; due=Math.min(31,Math.max(0,due));
+  S.fixed.push({id:uid(),name,amount:amt,dueDay:due,cat:$('#fxCat').value,lastPaid:null});
+  save(); closeSheet(); rerender(); toast('Gasto fijo registrado ✓');
 }
 
 /* --- Nueva deuda --- */
