@@ -1,7 +1,7 @@
 /* FullGold service worker — permite instalar la app y usarla sin conexión.
    Estrategia: red primero (para recibir actualizaciones), caché como respaldo. */
-const CACHE = 'fullgold-v1';
-const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE = 'fullgold-v3';
+const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './logo.svg'];
 
 self.addEventListener('install', e => {
   self.skipWaiting();
